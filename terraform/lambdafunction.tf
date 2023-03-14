@@ -127,5 +127,10 @@ resource "aws_api_gateway_deployment" "deployment1" {
 resource "aws_api_gateway_stage" "dev" {
     deployment_id = aws_api_gateway_deployment.deployment1.id
     rest_api_id = aws_api_gateway_rest_api.counter-api-gateway.id
-    stage_name = "dev"
+    stage_name = "prod"
 }
+
+output "invoke_arn" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}"}
+output "stage_name" {value = "${aws_api_gateway_stage.dev.stage_name}"}
+output "path_part" {value = "${aws_api_gateway_resources.counter.path_part}"}
+output "complete_unvoke_url" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}${aws_api_gateway_stage.dev.stage_name}/${aws_api_gateway_resource.counter.path_part}"}
