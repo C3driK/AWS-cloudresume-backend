@@ -27,17 +27,16 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
     "Version": "2012-10-17",
     "Statement": [
         {
-                {
-      "Sid": "",
-      "Action": "dynamodb:*",
-      "Effect": "Allow",
-      "Resource": "*"
-    },
+            "Sid": "",
+            "Action": "dynamodb:*",
+            "Effect": "Allow",
+            "Resource": "*"
         }
     ]
 }
 EOF
 }
+
 
 # Policy Attachment on the role.
 
