@@ -132,5 +132,5 @@ resource "aws_api_gateway_stage" "dev" {
 
 output "invoke_arn" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}"}
 output "stage_name" {value = "${aws_api_gateway_stage.dev.stage_name}"}
-output "path_part" {value = "${aws_api_gateway_resources.counter.path_part}"}
+output "path_part" {value = "${aws_api_gateway_resource.counter.path_part}"}
 output "complete_unvoke_url" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}${aws_api_gateway_stage.dev.stage_name}/${aws_api_gateway_resource.counter.path_part}"}
