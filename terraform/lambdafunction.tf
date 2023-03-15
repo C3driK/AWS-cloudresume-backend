@@ -134,3 +134,16 @@ output "invoke_arn" {value = "${aws_api_gateway_deployment.deployment1.invoke_ur
 output "stage_name" {value = "${aws_api_gateway_stage.dev.stage_name}"}
 output "path_part" {value = "${aws_api_gateway_resource.counter.path_part}"}
 output "complete_unvoke_url" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}${aws_api_gateway_stage.dev.stage_name}/${aws_api_gateway_resource.counter.path_part}"}
+
+
+# DYNAMODB
+
+resource "aws_dynamodb_table" "DynamoDBTable" {
+    attribute {
+        name = "visitor_id"
+        type = "S"
+    }
+    billing_mode = "PAY_PER_REQUEST"
+    name = "visitor_count2"
+    hash_key = "visitor_id"
+}
