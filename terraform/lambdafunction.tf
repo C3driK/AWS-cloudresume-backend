@@ -116,7 +116,7 @@ data "aws_iam_policy_document" "test" {
 }
 
 resource "aws_api_gateway_rest_api_policy" "test" {
-  rest_api_id = aws_api_gateway_rest_api.test.id
+  rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
   policy      = data.aws_iam_policy_document.test.json
 }
 
