@@ -90,7 +90,7 @@ resource "aws_api_gateway_rest_api" "CounterAPI" {
 }
 
 resource "aws_api_gateway_resource" "visits" {
-    parent_id    = aws_api_gateway_rest_api.visits.root_resource_id
+    parent_id    = aws_api_gateway_rest_api.CounterAPI.root_resource_id
     rest_api_id  = aws_api_gateway_rest_api.CounterAPI.id
     path_part    = "visits"
 }
