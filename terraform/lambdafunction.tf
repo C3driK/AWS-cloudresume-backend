@@ -55,7 +55,7 @@ data "archive_file" "zip_the_python_code" {
 
 # Create a lambda function
 # In terraform ${path.module} is the current directory.
-resource "aws_lambda_function" "terraform_lambda_func" {
+resource "aws_lambda_function" "visitorCount_lambda_function" {
     filename = "${path.module}/python/visitorCount.zip"
     function_name = "visitorCount_lambda_function"
     role = aws_iam_role.lambda_role.arn
@@ -75,65 +75,72 @@ output "terraform_aws_role_arn_output" {
 
 # API-GATEWAY
 
-resource "aws_lambda_permission" "counter_api_gateway_permission" {
-    statement_id = "AllowLambdaExecutionFromAPIGateway"
-    action = "lambda:InvokeFunction"
-    function_name = "visitorCount_lambda_function"
-    principal = "apigateway.amazonaws.com"
+resource "aws_api_gateway_rest_api" "CounterAPI" {
+  name = "CounterAPI"
 }
 
-resource "aws_api_gateway_rest_api" "counter-api-gateway" {
-    name = "counter-api-gateway"
-    endpoint_configuration {
-      types = ["REGIONAL"]
-    }
+resource "aws_lambda_permission" "lambda_permission" {
+    statement_id   = "AllowCounterAPIInvoke"
+    action         = "lambda:InvokeFunction"
+    function_name  = "visitorCount_lambda_function"
+    principal      = "apigateway.amazonaws.com"
+
+    source_arn = "${aws_api_gateway_rest_api.CounterAPI.execution_arn}/*"
 }
 
-resource "aws_api_gateway_resource" "counter" {
-    rest_api_id = aws_api_gateway_rest_api.counter-api-gateway.id
-    parent_id = aws_api_gateway_rest_api.counter-api-gateway.root_resource_id
-    path_part = "counter"
+resource "aws_api_gateway_resource" "visits" {
+    parent_id    = aws_api_gateway_rest_api.CounterAPI.root_resource_id
+    path_part    = "visits"
+    rest_api_id  = "aws_api_gateway_rest_api.CounterAPI.id"
 }
 
-# POST Method
-
-resource "aws_api_gateway_method" "post" {
-    rest_api_id = aws_api_gateway_rest_api.counter-api-gateway.id
-    resource_id = aws_api_gateway_resource.counter.id
-    http_method = "POST"
+resource "aws_api_gateway_method" "test" {
     authorization = "NONE"
-    api_key_required = false
+    http_method   = "POST"
+    resource_id   = "aws_api_gateway_resource.visits.id"
+    rest_api_id   = "aws_api_gateway_rest_api.CounterAPI.id" 
 }
 
-resource "aws_api_gateway_integration" "integration" {
-    rest_api_id = aws_api_gateway_rest_api.counter-api-gateway.id
-    resource_id = aws_api_gateway_resource.counter.id
-    http_method = aws_api_gateway_method.post.http_method
-    integration_http_method = "POST"
-    type = "AWS_PROXY"
-    uri = aws_lambda_function.terraform_lambda_func.invoke_arn
+resource "aws_api_gateway_integration" "integrate1" {
+    http_method = aws_api_gateway_method.test.http_method
+    resource_id = aws_api_gateway_resource.visits.id
+    rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
+    type = "MOCK"
 }
-
-# Deployment and Stage
 
 resource "aws_api_gateway_deployment" "deployment1" {
-    rest_api_id = aws_api_gateway_rest_api.counter-api-gateway.id
-    depends_on = [aws_api_gateway_integration.integration]
-    lifecycle {
-      create_before_destroy = true
-    }
+  rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
+
+  triggers = {
+    redeployment = sha1(jsonencode([
+        aws_api_gateway_resource.visits.id,
+        aws_api_gateway_method.test.id,
+        aws_api_gateway_integration.integrate1.id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-resource "aws_api_gateway_stage" "dev" {
+
+resource "aws_api_gateway_stage" "prod" {
     deployment_id = aws_api_gateway_deployment.deployment1.id
-    rest_api_id = aws_api_gateway_rest_api.counter-api-gateway.id
-    stage_name = "prod"
+    rest_api_id   = aws_api_gateway_rest_api.CounterAPI.id
+    stage_name    = "prod"
 }
+
+
+
+
+
+
 
 output "invoke_arn" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}"}
-output "stage_name" {value = "${aws_api_gateway_stage.dev.stage_name}"}
-output "path_part" {value = "${aws_api_gateway_resource.counter.path_part}"}
-output "complete_unvoke_url" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}${aws_api_gateway_stage.dev.stage_name}/${aws_api_gateway_resource.counter.path_part}"}
+output "stage_name" {value = "${aws_api_gateway_stage.prod.stage_name}"}
+output "path_part" {value = "${aws_api_gateway_resource.visits.path_part}"}
+output "complete_unvoke_url" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}${aws_api_gateway_stage.prod.stage_name}/${aws_api_gateway_resource.visits.path_part}"}
 
 
 # DYNAMODB
