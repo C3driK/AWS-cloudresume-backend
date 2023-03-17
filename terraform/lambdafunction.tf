@@ -85,10 +85,10 @@ output "terraform_aws_role_arn_output" {
 resource "aws_lambda_permission" "lambda_permission" {
     statement_id   = "AllowCounterAPIInvoke"
     action         = "lambda:InvokeFunction"
-    function_name  = "visitorCount_lambda_function"
+    function_name  = aws_lambda_function.visitorCount_lambda_function.arn
     principal      = "apigateway.amazonaws.com"
 
-    source_arn = "${aws_api_gateway_rest_api.CounterAPI.execution_arn}/*"
+    source_arn = aws_api_gateway_rest_api.CounterAPI.execution_arn
 }
 
 # API-GATEWAY
@@ -150,13 +150,16 @@ resource "aws_api_gateway_integration" "integrate1" {
 }
 
 resource "aws_api_gateway_deployment" "deployment1" {
+  depends_on = [
+    aws_api_gateway_integration.integrate1,
+  ]   
   rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
 
   triggers = {
     redeployment = sha1(jsonencode([
-        aws_api_gateway_resource.visits.id,
-        aws_api_gateway_method.post.id,
-        aws_api_gateway_integration.integrate1.id,
+        aws_api_gateway_resource.visits,
+        aws_api_gateway_method.post,
+        aws_api_gateway_integration.integrate1,
     ]))
   }
 
