@@ -89,7 +89,7 @@ resource "aws_lambda_permission" "lambda_permission" {
 }
 
 resource "aws_api_gateway_resource" "visits" {
-    parent_id    = aws_api_gateway_rest_api.CounterAPI.root_resource.id
+    parent_id    = aws_api_gateway_rest_api.CounterAPI.root_resource_id
     path_part    = "visits"
     rest_api_id  = "aws_api_gateway_rest_api.CounterAPI.id"
 }
