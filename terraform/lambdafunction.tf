@@ -109,7 +109,7 @@ resource "aws_api_gateway_integration" "integrate1" {
     rest_api_id             = aws_api_gateway_rest_api.CounterAPI.id
     type                    = "AWS_PROXY"
     integration_http_method = "POST"
-    uri                     = aws_lambda_functio.CounterAPI.invoke_arn 
+    uri                     = aws_lambda_function.CounterAPI.invoke_arn 
 }
 
 resource "aws_api_gateway_deployment" "deployment1" {
