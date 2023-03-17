@@ -100,6 +100,32 @@ resource "aws_api_gateway_rest_api" "CounterAPI" {
   }
 }
 
+
+data "aws_iam_policy_document" "test" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["*"]
+    }
+
+    actions   = ["execute-api:Invoke"]
+    resources = [aws_api_gateway_rest_api.CounterAPI.execution_arn]
+  }
+}
+
+resource "aws_api_gateway_rest_api_policy" "test" {
+  rest_api_id = aws_api_gateway_rest_api.test.id
+  policy      = data.aws_iam_policy_document.test.json
+}
+
+
+
+
+
+
+
 resource "aws_api_gateway_resource" "visits" {
     parent_id    = aws_api_gateway_rest_api.CounterAPI.root_resource_id
     rest_api_id  = aws_api_gateway_rest_api.CounterAPI.id
@@ -112,7 +138,6 @@ resource "aws_api_gateway_method" "post" {
     resource_id      = aws_api_gateway_resource.visits.id
     rest_api_id      = aws_api_gateway_rest_api.CounterAPI.id 
     api_key_required = false
-    request_parameters = {}
 }
 
 resource "aws_api_gateway_integration" "integrate1" {
