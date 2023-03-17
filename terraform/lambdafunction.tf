@@ -109,10 +109,11 @@ resource "aws_api_gateway_resource" "visits" {
 
 resource "aws_api_gateway_method" "post" {
     authorization    = "NONE"
-    http_method      = "POST"
+    http_method      = "ANY"
     resource_id      = aws_api_gateway_resource.visits.id
     rest_api_id      = aws_api_gateway_rest_api.CounterAPI.id 
     api_key_required = false
+    request_parameters = {}
 }
 
 resource "aws_api_gateway_integration" "integrate1" {
@@ -120,7 +121,7 @@ resource "aws_api_gateway_integration" "integrate1" {
     resource_id             = aws_api_gateway_resource.visits.id
     rest_api_id             = aws_api_gateway_rest_api.CounterAPI.id
     type                    = "AWS_PROXY"
-    integration_http_method = "POST"
+    integration_http_method = "ANY"
     uri                     = aws_lambda_function.visitorCount_lambda_function.invoke_arn 
 }
 
