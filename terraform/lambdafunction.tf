@@ -97,6 +97,7 @@ resource "aws_api_gateway_rest_api" "CounterAPI" {
   name = "CounterAPI"
   endpoint_configuration {
     types = ["REGIONAL"]
+    disable_execute_api_endpoint = false
   }
 }
 
@@ -144,7 +145,6 @@ resource "aws_api_gateway_stage" "prod" {
     deployment_id = aws_api_gateway_deployment.deployment1.id
     rest_api_id   = aws_api_gateway_rest_api.CounterAPI.id
     stage_name    = "prod"
-    x-amazon-apigateway-api-key-source = "HEADER"
 }
 
 
