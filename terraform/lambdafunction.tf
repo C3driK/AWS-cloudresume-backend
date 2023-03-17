@@ -97,7 +97,6 @@ resource "aws_api_gateway_rest_api" "CounterAPI" {
   name = "CounterAPI"
   endpoint_configuration {
     types = ["REGIONAL"]
-    disable_execute_api_endpoint = false
   }
 }
 
