@@ -71,14 +71,6 @@ output "terraform_aws_role_arn_output" {
     value = aws_iam_role.lambda_role.arn
 }
 
-
-
-# API-GATEWAY
-
-resource "aws_api_gateway_rest_api" "CounterAPI" {
-  name = "CounterAPI"
-}
-
 resource "aws_lambda_permission" "lambda_permission" {
     statement_id   = "AllowCounterAPIInvoke"
     action         = "lambda:InvokeFunction"
@@ -88,24 +80,36 @@ resource "aws_lambda_permission" "lambda_permission" {
     source_arn = "${aws_api_gateway_rest_api.CounterAPI.execution_arn}/*"
 }
 
+# API-GATEWAY
+
+resource "aws_api_gateway_rest_api" "CounterAPI" {
+  name = "CounterAPI"
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+}
+
 resource "aws_api_gateway_resource" "visits" {
     parent_id    = aws_api_gateway_rest_api.CounterAPI.root_resource_id
     path_part    = "visits"
     rest_api_id  = "aws_api_gateway_rest_api.CounterAPI.id"
 }
 
-resource "aws_api_gateway_method" "test" {
-    authorization = "NONE"
-    http_method   = "POST"
-    resource_id   = "aws_api_gateway_resource.visits.id"
-    rest_api_id   = "aws_api_gateway_rest_api.CounterAPI.id" 
+resource "aws_api_gateway_method" "post" {
+    authorization    = "NONE"
+    http_method      = "POST"
+    resource_id      = "aws_api_gateway_resource.visits.id"
+    rest_api_id      = "aws_api_gateway_rest_api.CounterAPI.id" 
+    api_key_required = false
 }
 
 resource "aws_api_gateway_integration" "integrate1" {
-    http_method = aws_api_gateway_method.test.http_method
-    resource_id = aws_api_gateway_resource.visits.id
-    rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
-    type = "MOCK"
+    http_method             = aws_api_gateway_method.post.http_method
+    resource_id             = aws_api_gateway_resource.visits.id
+    rest_api_id             = aws_api_gateway_rest_api.CounterAPI.id
+    type                    = "AWS_PROXY"
+    integration_http_method = "POST"
+    uri                     = aws_lambda_functio.CounterAPI.invoke_arn 
 }
 
 resource "aws_api_gateway_deployment" "deployment1" {
@@ -114,7 +118,7 @@ resource "aws_api_gateway_deployment" "deployment1" {
   triggers = {
     redeployment = sha1(jsonencode([
         aws_api_gateway_resource.visits.id,
-        aws_api_gateway_method.test.id,
+        aws_api_gateway_method.post.id,
         aws_api_gateway_integration.integrate1.id,
     ]))
   }
