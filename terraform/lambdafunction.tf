@@ -18,6 +18,17 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
+resource "aws_dynamodb_table" "DynamoDBTable" {
+    attribute {
+        name = "visitor_id"
+        type = "S"
+    }
+    billing_mode = "PAY_PER_REQUEST"
+    name = "visitor_count2"
+    hash_key = "visitor_id"
+}
+
+
 resource "aws_iam_policy" "iam_policy_for_lambda" {
     name = "iam_policy_for_counter_lambda_tf_role"
     path = "/"
@@ -147,14 +158,4 @@ output "path_part" {value = "${aws_api_gateway_resource.visits.path_part}"}
 output "complete_unvoke_url" {value = "${aws_api_gateway_deployment.deployment1.invoke_url}${aws_api_gateway_stage.prod.stage_name}/${aws_api_gateway_resource.visits.path_part}"}
 
 
-# DYNAMODB
 
-resource "aws_dynamodb_table" "DynamoDBTable" {
-    attribute {
-        name = "visitor_id"
-        type = "S"
-    }
-    billing_mode = "PAY_PER_REQUEST"
-    name = "visitor_count2"
-    hash_key = "visitor_id"
-}
