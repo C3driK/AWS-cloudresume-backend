@@ -144,7 +144,7 @@ resource "aws_api_gateway_stage" "prod" {
     deployment_id = aws_api_gateway_deployment.deployment1.id
     rest_api_id   = aws_api_gateway_rest_api.CounterAPI.id
     stage_name    = "prod"
-    api_key_source = "HEADER"
+    x-amazon-apigateway-api-key-source = "HEADER"
 }
 
 
