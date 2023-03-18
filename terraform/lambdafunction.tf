@@ -136,7 +136,7 @@ resource "aws_api_gateway_method_response" "options" {
 }
 
 
-resource "aws_api_gateway_integration" "integrate1" {
+resource "aws_api_gateway_integration" "options" {
     http_method             = aws_api_gateway_method.options.http_method
     resource_id             = aws_api_gateway_resource.visits.id
     rest_api_id             = aws_api_gateway_rest_api.CounterAPI.id
@@ -169,6 +169,20 @@ resource "aws_api_gateway_method" "post" {
   authorization = "NONE"
 }
 
+resource "aws_api_gateway_method_response" "post" {
+  rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
+  resource_id = aws_api_gateway_resource.visits.id
+  http_method = aws_api_gateway_method.post.http_method
+  status_code = 200
+  response_models = {
+    "application/json" = "Empty"
+  }
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+  depends_on = [aws_api_gateway_method.post]
+}
+
 resource "aws_api_gateway_integration" "integration" {
   rest_api_id             = aws_api_gateway_rest_api.CounterAPI.id
   resource_id             = aws_api_gateway_resource.visits.id
@@ -181,14 +195,11 @@ resource "aws_api_gateway_integration" "integration" {
 
 
 resource "aws_api_gateway_deployment" "deployment1" {
-  depends_on = [aws_api_gateway_integration.integrate1]   
-  rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
-  stage_name = "prod"
-
-  lifecycle {
-    create_before_destroy = true
-  }
+    rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
+    stage_name = "prod"
+    depends_on = [aws_api_gateway_intergration.integration]
 }
+  
 
 
 resource "aws_api_gateway_stage" "prod" {
