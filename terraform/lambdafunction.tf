@@ -144,7 +144,7 @@ resource "aws_api_gateway_integration" "integrate1" {
     request_templates = {
         "application/json" : "{\"statusCode: 200}"
     }
-    passthrough_behaviour = "WHEN_NO_MATCH"
+    passthrough_behavior = "WHEN_NO_MATCH"
     depends_on = [aws_api_gateway_method.options]
 
 }
@@ -176,7 +176,7 @@ resource "aws_api_gateway_integration" "integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = aws_lambda_function.visitorCount_lambda_function.invoke_arn
-  depends_on              = [aws_api_gateway_method.post, aws_lambda_function.viewCountIncrement]
+  depends_on              = [aws_api_gateway_method.post, aws_lambda_function.visitorCount_lambda_function]
 }
 
 
