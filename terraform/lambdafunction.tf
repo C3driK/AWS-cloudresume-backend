@@ -27,6 +27,17 @@ resource "aws_dynamodb_table" "DynamoDBTable" {
     name = "visitor_count2"
     hash_key = "visitor_id"
 }
+resource "aws_dynamodb_table_item" "visitor_count" {
+  table_name = aws_dynamodb_table.DynamoDBTable.name
+  hash_key   = aws_dynamodb_table.DynamoDBTable.hash_key
+
+  item = <<ITEM
+  {
+    "visitor_id": {"S": "Quantity"},
+    "viewCount": {"N":"0"}
+  }
+ITEM
+}
 
 
 resource "aws_iam_policy" "iam_policy_for_lambda" {
@@ -82,14 +93,6 @@ output "terraform_aws_role_arn_output" {
     value = aws_iam_role.lambda_role.arn
 }
 
-resource "aws_lambda_permission" "lambda_permission" {
-    statement_id   = "AllowCounterAPIInvoke"
-    action         = "lambda:InvokeFunction"
-    function_name  = aws_lambda_function.visitorCount_lambda_function.arn
-    principal      = "apigateway.amazonaws.com"
-
-    source_arn = aws_api_gateway_rest_api.CounterAPI.execution_arn
-}
 
 # API-GATEWAY
 
@@ -100,68 +103,87 @@ resource "aws_api_gateway_rest_api" "CounterAPI" {
   }
 }
 
-
-data "aws_iam_policy_document" "test" {
-  statement {
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["*"]
-    }
-
-    actions   = ["execute-api:Invoke"]
-    resources = [aws_api_gateway_rest_api.CounterAPI.execution_arn]
-  }
-}
-
-resource "aws_api_gateway_rest_api_policy" "test" {
-  rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
-  policy      = data.aws_iam_policy_document.test.json
-}
-
-
-
-
-
-
-
 resource "aws_api_gateway_resource" "visits" {
     parent_id    = aws_api_gateway_rest_api.CounterAPI.root_resource_id
     rest_api_id  = aws_api_gateway_rest_api.CounterAPI.id
-    path_part    = "visits"
+    path_part    = "CounterAPI"
 }
 
-resource "aws_api_gateway_method" "post" {
+resource "aws_api_gateway_method" "options" {
     authorization    = "NONE"
-    http_method      = "POST"
+    http_method      = "OPTIONS"
     resource_id      = aws_api_gateway_resource.visits.id
     rest_api_id      = aws_api_gateway_rest_api.CounterAPI.id 
     api_key_required = false
 }
 
-resource "aws_api_gateway_integration" "integrate1" {
-    http_method             = aws_api_gateway_method.post.http_method
-    resource_id             = aws_api_gateway_resource.visits.id
-    rest_api_id             = aws_api_gateway_rest_api.CounterAPI.id
-    type                    = "AWS_PROXY"
-    integration_http_method = "POST"
-    uri                     = aws_lambda_function.visitorCount_lambda_function.invoke_arn 
+resource "aws_api_gateway_method_response" "options" {
+    rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
+    resource_id = aws_api_gateway_resource.visits.id
+    http_method = aws_api_gateway_method.options.http_method
+    status_code = 200
+    response_models = {
+        "application/json" = "Empty"
+    }
+    response_parameters = {
+        "method.response.header.Access-Control-Allow-Headers" = true,
+        "method.response.header.Access-Control-Allow-Methods" = true,
+        "method.response.header.Access-Control-Allow-Origin"  = true
+    }
+    depends_on = [
+      aws_api_gateway_method.options
+    ]
 }
 
-resource "aws_api_gateway_deployment" "deployment1" {
-  depends_on = [
-    aws_api_gateway_integration.integrate1,
-  ]   
-  rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
 
-  triggers = {
-    redeployment = sha1(jsonencode([
-        aws_api_gateway_resource.visits,
-        aws_api_gateway_method.post,
-        aws_api_gateway_integration.integrate1,
-    ]))
+resource "aws_api_gateway_integration" "integrate1" {
+    http_method             = aws_api_gateway_method.options.http_method
+    resource_id             = aws_api_gateway_resource.visits.id
+    rest_api_id             = aws_api_gateway_rest_api.CounterAPI.id
+    type                    = "MOCK"
+    request_templates = {
+        "application/json" : "{\"statusCode\: 200}"
+    }
+    passthrough_behaviour = "WHEN_NO_MATCH"
+    depends_on = [aws_api_gateway_method.options]
+
+}
+
+resource "aws_api_gateway_integration_response" "options" {
+  rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
+  resource_id = aws_api_gateway_resource.visits.id
+  http_method = aws_api_gateway_method.options.http_method
+  status_code = aws_api_gateway_method_response.options.status_code
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'",
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
   }
+  depends_on = [aws_api_gateway_method_response.options]
+}
+
+resource "aws_api_gateway_method" "post" {
+  rest_api_id   = aws_api_gateway_rest_api.CounterAPI.id
+  resource_id   = aws_api_gateway_resource.visits.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "integration" {
+  rest_api_id             = aws_api_gateway_rest_api.CounterAPI.id
+  resource_id             = aws_api_gateway_resource.visits.id
+  http_method             = "POST"
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = aws_lambda_function.visitorCount_lambda_function.invoke_arn
+  depends_on              = [aws_api_gateway_method.post, aws_lambda_function.viewCountIncrement]
+}
+
+
+resource "aws_api_gateway_deployment" "deployment1" {
+  depends_on = [aws_api_gateway_integration.integrate1]   
+  rest_api_id = aws_api_gateway_rest_api.CounterAPI.id
+  stage_name = "prod"
 
   lifecycle {
     create_before_destroy = true
@@ -175,6 +197,12 @@ resource "aws_api_gateway_stage" "prod" {
     stage_name    = "prod"
 }
 
+resource "aws_lambda_permission" "apigw" {
+    statement_id   = "AllowCounterAPIInvoke"
+    action         = "lambda:InvokeFunction"
+    function_name  = aws_lambda_function.visitorCount_lambda_function.arn
+    principal      = "apigateway.amazonaws.com"
+}
 
 
 
